@@ -20,6 +20,6 @@ Notion will also be available to store the tasks and eventually track it better.
 To avoid storing passwords & api key in plain environment variables. I'll try to include bitwarden configuration in this to allow user to use the bitwarden cli to store their credentials (especially Notion app key)
 
 # Options
-``--completed`` -> Also displays completed note, by default notes are hidden
-``--dir`` -> Specify a directory to scan, default scan the entire project from root excluding all files in the .env
-``--full`` -> Give the whole description for each tasks
+``--completed`` -> Also displays completed note, by default notes are hidden  
+``--dir`` -> Specify a directory to scan, default scan the entire project from root excluding all files in the .env  
+``--full`` -> Give the whole description for each tasks  
