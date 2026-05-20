@@ -4,7 +4,7 @@ CCLIB := -lm
 SRCS := $(wildcard src/*.c)
 
 run: build
-	./bin/tasks
+	sh run.sh
 
 build: $(SRCS)
 	$(CC) -o bin/tasks $^ $(CCFLAGS) $(CCLIB)
