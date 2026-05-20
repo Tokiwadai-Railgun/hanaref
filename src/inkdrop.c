@@ -8,6 +8,9 @@
 
 size_t inkdrop_handle_request(char* buffer, size_t itemsize, size_t nitems, void* _) {
     size_t bytes = itemsize * nitems;
+    int linenumber = 1;
+    printf("New chunk (%zu bytes)\n", bytes);
+    printf("%d:\t", linenumber);
 
     return bytes;
 }
@@ -34,6 +37,7 @@ void inkdrop_handle_note_list(char* note_list, CURL* curl) {
     char* username = getenv("INKDROP_USERNAME");
     curl_easy_setopt(curl, CURLOPT_USERNAME, username);
     curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, inkdrop_handle_request);
     
     char  buffer[256];
     char* line = strtok(note_list, "\n");
