@@ -1,6 +1,6 @@
 CC := gcc
 CCFLAGS := -Wall -Wextra
-CCLIB := -lm -lcurl
+CCLIB := -lm -lcurl -lcjson
 SRCS := $(wildcard src/*.c)
 
 run: build
