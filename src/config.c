@@ -39,6 +39,7 @@ void load_dotenv() {
  */
 Config* init_config() {
   conf.inkdorp_url = getenv("INKDROP_URL");
+  return &conf;
 }
 
 Config* get_config() {
