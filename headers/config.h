@@ -6,11 +6,14 @@
 
 typedef struct {
     CURL *curl;
+    char* inkdorp_url;
 } Config;
 /*
  * Read the .env file and add the environment variables to path
  */
-void env_init();
+void load_dotenv();
+
+Config* init_config();
 
 Config* get_config();
 

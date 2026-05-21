@@ -5,6 +5,7 @@
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,15 +29,25 @@ size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void
 
     printf("\n");
 
+
+    // TODO: include a caching system for the tags, avoiding to endlessly querrying the API
+    // then make a request to get all the tags
+
+    Config* config = get_config();
+    char tag_url = malloc(sizeof(char) * strlen(config->inkdorp_url));
+    CURL* curl = config->curl;
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+
     // Cleaning the json tree, also clean all the subgenerated cJSONs
     cJSON_Delete(response);
     free(tags_id);
     return bytes;
 }
 
-char *inkdrop_get_tag(char *tag_id) {
-    Config *conf = get_config();
-    CURL   *curl = conf->curl;
+size_t inkdrop_handle_tag_request(char* buffer, size_t itemsize, size_t nitems, void* _) {
+  size_t bytes = itemsize * nitems;
+
+  return bytes;
 }
 
 InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {

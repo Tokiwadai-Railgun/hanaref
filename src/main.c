@@ -20,18 +20,16 @@ int check_for_env() {
  * Arguments 1 will contains the list of Inkdrop Notes
  */
 int main(int argc, char **args) {
+    load_dotenv(); // Initialise dotenv
+    init_config();
+
     CURL    *curl   = curl_easy_init();
     CURLcode result = curl_easy_perform(curl);
+    Config  *conf   = get_config();
+    conf->curl      = curl;
 
-    Config* conf = get_config();
-    conf->curl = curl;
-
-    env_init(); // Initialise dotenv
-    printf("Number of arguments : %d\n", argc);
     inkdrop_handle_note_list(args[1], curl);
 
     curl_easy_cleanup(curl);
     return EXIT_SUCCESS;
 }
-
-get_curl

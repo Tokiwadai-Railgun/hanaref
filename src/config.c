@@ -8,7 +8,7 @@
 
 Config conf;
 
-void env_init() {
+void load_dotenv() {
     char buffer[256];
 
     //[C String parsing](inkdrop://note/TKe409Fc)
@@ -30,6 +30,15 @@ void env_init() {
 
         setenv(name, value, 1);
     }
+}
+
+/**
+ * Load environment variables to the config var  
+ *
+ * WARNING, only load environment variables, curl remains undefined at this step
+ */
+Config* init_config() {
+  conf.inkdorp_url = getenv("INKDROP_URL");
 }
 
 Config* get_config() {
