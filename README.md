@@ -8,6 +8,24 @@ Also as this project aims to be very lightweight, I've choosen C as the language
 > [!IMPORTANT]
 > Any coming that i suspect coming from an AI will be rejected, again, this is a PERSONAL project for PERSONAL usage and LEARNING purpose
 
+Yes i know, this project could have probably be fully written in bash, but I wanted to train c manipulation in c and explore c libraries
+# Installation
+## Release
+I plan, once the project is finalised as a first version, to publish a release.
+Still not available
+## AUR
+Eventually, i'll publish this to AUR so arch users could download it
+
+## Local build
+### Requirements
+- libcurl-devel, used to query inkdrop and notion
+- cjson-devel, used to interact with the json devel
+- make
+
+### Steps
+You can simply run ``make build`` to build the binary which will appear in ``./bin/tasks``
+Then you can copy this file somewhere in your path
+
 
 # Integration
 ## Inkdrop
