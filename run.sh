@@ -15,4 +15,4 @@ fi
 # -o only return the matched part
 # -E use regex
 result=$(grep -rhoE '\[[A-Za-z1-9 ]+\]\(inkdrop://note/[A-Za-z0-9-]+\)' $excluded)
-./bin/tasks "$result"
+./bin/tasks "$result" $@
