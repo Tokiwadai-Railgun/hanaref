@@ -21,12 +21,9 @@ int check_for_env() {
  */
 int main(int argc, char **args) {
     load_dotenv(); // Initialise dotenv
-    init_config();
-
-    CURL    *curl   = curl_easy_init();
-    CURLcode result = curl_easy_perform(curl);
-    Config  *conf   = get_config();
-    conf->curl      = curl;
+    CURL   *curl = curl_easy_init();
+    Config *conf = init_config();
+    conf->curl   = curl;
 
     inkdrop_handle_note_list(args[1], curl);
 

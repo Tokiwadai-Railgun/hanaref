@@ -6,14 +6,20 @@
 typedef enum { Active, OnHold, Completed, Dropped } InkdropStatus;
 
 typedef struct {
-    char*         name;
+    char         *name;
     InkdropStatus status;
-    char*         description;
-    char**        tags;
+    char         *description;
+    char        **tags;
+    int           ntags;
 } InkdropNote;
 
-InkdropNote inkdrop_get_note(char* url, CURL* curl);
+InkdropNote inkdrop_get_note(char *url, CURL *curl);
 
-void inkdrop_handle_note_list(char*, CURL* curl);
+void inkdrop_handle_note_list(char *, CURL *curl);
+
+/**
+ * Free the note and all it's component
+ */
+void inkdrop_free_note(InkdropNote *note);
 
 #endif
