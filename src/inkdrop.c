@@ -3,7 +3,6 @@
 #include "../headers/config.h"
 
 #include <cjson/cJSON.h>
-#include <stdlib.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <stddef.h>
@@ -11,21 +10,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *_) {
+size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *ignored) {
+    UNUSED(ignored);
     size_t bytes = itemsize * nitems;
 
     return bytes;
 }
 
-void display_tags(cJSON *note) {
+char *get_tags(cJSON *note) {
     Config *config = get_config();
-    cJSON *tags = cJSON_GetObjectItemCaseSensitive(note, "tags");
-    cJSON *tag;
+    cJSON  *tags   = cJSON_GetObjectItemCaseSensitive(note, "tags");
+    cJSON  *tag;
 
     // assuming that each tag:<tag_id> is no longer than 20 char long
-    char  *tag_url   = malloc(sizeof(char) * strlen(config->inkdorp_url) + strlen("/note:XXXXXXXXXXXXXX"));
-    CURL  *curl      = config->curl;
+    char *tag_url = malloc(sizeof(char) * strlen(config->inkdorp_url) + TAG_URL_LEN);
+    CURL *curl    = config->curl;
 
+    char *tags_arr = malloc(TAG_NAME_LEN * cJSON_GetArraySize(tags));
     printf("\tTags: ");
     // TODO: include a caching system for the tags, avoiding to endlessly querrying the API
     cJSON_ArrayForEach(tag, tags) {
@@ -39,14 +40,17 @@ void display_tags(cJSON *note) {
 }
 
 size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void *_) {
-    size_t bytes      = itemsize * nitems;
-    cJSON *note       = cJSON_Parse(buffer);
+    size_t bytes = itemsize * nitems;
+    cJSON *note  = cJSON_Parse(buffer);
+    cJSON *title = cJSON_GetObjectItemCaseSensitive(note, "title");
 
-    display_tags(note);
+    printf("[%s]\n", title->valuestring);
+
+    get_tags(note);
 
     // ---------- Displaying Status ----------
     cJSON *status = cJSON_GetObjectItemCaseSensitive(note, "status");
-    printf("\tStatus : %s", status->valuestring);
+    printf("\tStatus : %s\n", status->valuestring);
     // ---------------------------------------
 
     // Cleaning the json tree, also clean all the subgenerated cJSONs
@@ -61,7 +65,6 @@ InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {
     char *url = malloc(sizeof(char) * (strlen(inkdrop_url) + strlen(note_id) + 6));
     sprintf(url, "%s/note:%s", inkdrop_url, note_id);
 
-    printf("Url is : %s\n", url);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_perform(curl);
 
@@ -93,13 +96,13 @@ void inkdrop_handle_note_list(char *note_list, CURL *curl) {
 }
 
 void inkdrop_free_note(InkdropNote *note) {
-  // free the name 
-  free(note->name);
-  free(note->description);
+    // free the name
+    free(note->name);
+    free(note->description);
 
-  // Free all the tags
-  for (int i = 0; i < note->ntags; i++) {
-    free(note->tags[i]);
-  }
-  free(note->tags);
+    // Free all the tags
+    for (int i = 0; i < note->ntags; i++) {
+        free(note->tags[i]);
+    }
+    free(note->tags);
 }

@@ -1,4 +1,3 @@
-// NOTE: [C Header files](inkdrop://note/UmdDKJ0X)
 #ifndef CONFIG
 #define CONFIG
 
