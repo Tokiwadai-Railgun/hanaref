@@ -2,8 +2,8 @@
 #ifndef INKDROP
 #define INKDROP
 #define UNUSED(x) (void)(x)
-#define TAG_NAME_LEN = 20
-#define TAG_URL_LEN = 20
+#define TAG_NAME_LEN 20
+#define TAG_URL_LEN 20
 
 #include <curl/curl.h>
 typedef enum { Active, OnHold, Completed, Dropped } InkdropStatus;
