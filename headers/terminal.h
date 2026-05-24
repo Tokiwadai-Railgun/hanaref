@@ -9,6 +9,8 @@
 
 #define LINK(url, text) "\e]8;;" url "\e\\" text "\e]8;;\e\\"
 
+#define DEBUG() ORANGE("[DEBUG] --> ")
+
 /*
  * give a string with %s where to input "text" and "url"
  */

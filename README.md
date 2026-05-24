@@ -24,6 +24,15 @@ Still not available
 You can simply run ``make build`` to build the binary which will appear in ``./bin/tasks``
 Then you can copy this file somewhere in your path
 
+## Cliclable Links
+Clickable links requires a local configuration of your terminal emulator
+### Kitty 
+simply add inkdrop to ``url_prefixes`` in kitty.conf  
+Example :  
+```conf
+url_prefixes http https inkdrop
+```
+
 
 # Integration
 ## Inkdrop

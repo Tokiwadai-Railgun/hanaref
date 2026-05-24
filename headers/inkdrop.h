@@ -1,6 +1,7 @@
 // NOTE: [C Header files](inkdrop://note/UmdDKJ0X)
 #ifndef INKDROP
 #define INKDROP
+#include "config.h"
 #define UNUSED(x) (void)(x)
 #define TAG_NAME_LEN 20
 #define TAG_URL_LEN 20
@@ -23,9 +24,13 @@ typedef struct {
     size_t size;
 } ResponseBuffer;
 
-InkdropNote inkdrop_get_note(char *url, CURL *curl);
+/**
+ * Query the local inkdrop http api to get the node based on it's id.
+ * Filter the note to exclude completed and dropped notes unless all parameter is set to 1.
+ */
+InkdropNote inkdrop_get_note(char *url, CURL *curl, int all);
 
-void inkdrop_handle_note_list(char *, CURL *curl);
+void inkdrop_handle_note_list(char *, CURL *curl, Paramters params);
 
 /**
  * Free the note and all it's component

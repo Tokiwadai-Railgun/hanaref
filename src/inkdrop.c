@@ -14,6 +14,7 @@
 
 size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data);
 void   inkdrop_print_note(InkdropNote *note);
+int    array_includes(char **array, int size, char *match);
 
 InkdropStatus str_to_status(char *status_name) {
     if (strcmp(status_name, "active") == 0) {
@@ -115,12 +116,12 @@ size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void
     return bytes;
 }
 
-InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {
+InkdropNote inkdrop_get_note(char *note_id, CURL *curl, int all) {
     char       *inkdrop_url = getenv("INKDROP_URL");
     InkdropNote return_value;
 
     // Build the note url
-    // [snprintf coredump coredump](inkdrop://note/GK5iLwSy)
+    //[snprintf return coredump](inkdrop://note/GK5iLwSy)
     size_t url_len = sizeof(char) * (strlen(inkdrop_url) + strlen(note_id) + 7);
     char  *url     = malloc(url_len);
     snprintf(url, url_len, "%s/note:%s", inkdrop_url, note_id);
@@ -142,24 +143,30 @@ InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {
     cJSON *title  = cJSON_GetObjectItemCaseSensitive(note, "title");
     cJSON *status = cJSON_GetObjectItemCaseSensitive(note, "status");
 
+    return_value.status = str_to_status(status->valuestring);
+    if (all == 0 && (return_value.status == Dropped || return_value.status == Completed)) {
+        // returning now to avoid tags query
+        cJSON_Delete(note);
+        return return_value;
+    }
+
     char *title_value = malloc((strlen(cJSON_GetStringValue(title)) + 1) * sizeof(char));
     strcpy(title_value, title->valuestring);
-    return_value.title  = title_value;
-    return_value.status = str_to_status(status->valuestring);
+    return_value.title = title_value;
 
     // extract the tags from the cJSON and insert them into the InkdropNote struct
     extract_tags(note, &return_value);
 
     // Cleaning the json tree, also clean all the subgenerated cJSONs
     cJSON_Delete(note);
-    // ----- Get tags for note -----
 
     free(url);
-    inkdrop_print_note(&return_value);
     return return_value;
 }
 
-void inkdrop_handle_note_list(char *note_list, CURL *curl) {
+void inkdrop_handle_note_list(char *note_list, CURL *curl, Paramters params) {
+    char *inkdrop_bug_name = getenv("INKDROP_BUG_TAG_NAME");
+
     char *password = getenv("INKDROP_PASSWORD");
     char *username = getenv("INKDROP_USERNAME");
     curl_easy_setopt(curl, CURLOPT_USERNAME, username);
@@ -174,7 +181,34 @@ void inkdrop_handle_note_list(char *note_list, CURL *curl) {
         // Remove one more last char
         line += 7;
         line[strlen(line) - 1] = '\0'; // remove the closing parenthesis
-        inkdrop_get_note(line, curl);
+        InkdropNote note       = inkdrop_get_note(line, curl, params.all);
+        if (params.all == 0 && (note.status == Dropped || note.status == Completed)) {
+            // skip the note
+            line = strtok(NULL, "\n");
+            continue;
+        }
+
+        if (params.bug) {
+            if (!array_includes(note.tags, note.ntags, inkdrop_bug_name)) {
+                line = strtok(NULL, "\n");
+                continue;
+            }
+        }
+
+        int tags_ok = 1;
+        for (int i = 0; i < params.ntags; i++) {
+            if (!array_includes(note.tags, note.ntags, params.tags[i])) {
+                tags_ok = 0;
+                break;
+            }
+        }
+
+        if (tags_ok == 0) {
+            line = strtok(NULL, "\n");
+            continue;
+        }
+        inkdrop_print_note(&note);
+        // TODO: Filter using the parameters
 
         line = strtok(NULL, "\n");
     }
@@ -193,7 +227,8 @@ void inkdrop_free_note(InkdropNote *note) {
 }
 
 void inkdrop_print_note(InkdropNote *note) {
-    printf("%s [%s] \x1b[38;5;25m\e]8;;%s\e\\open\e]8;;\e\\\x1b[39m\n", status_to_str(note->status), note->title, note->url);
+    printf("%s [%s] \x1b[38;5;25m\e]8;;%s\e\\open\e]8;;\e\\\x1b[39m\n", status_to_str(note->status), note->title,
+        note->url);
 
     printf("\tTags -> ");
     // Print tags
@@ -202,4 +237,15 @@ void inkdrop_print_note(InkdropNote *note) {
     }
     printf("%s", note->tags[note->ntags - 1]);
     printf("\n");
+}
+
+int array_includes(char **array, int size, char *match) {
+    for (int i = 0; i < size; i++) {
+        // printf(ORANGE("[DEBUG] --> ") "Checking %s to %s : %d\n", array[i], match, strcmp(array[i], match));
+        if (strcmp(array[i], match) == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
