@@ -13,13 +13,11 @@ Yes i know, this project could have probably be fully written in bash, but I wan
 ## Release
 I plan, once the project is finalised as a first version, to publish a release.
 Still not available
-## AUR
-Eventually, i'll publish this to AUR so arch users could download it
 
 ## Local build
 ### Requirements
 - libcurl-devel, used to query inkdrop and notion
-- cjson-devel, used to interact with the json devel
+- cjson-devel, used to deal with jsons response from apis
 - make
 
 ### Steps

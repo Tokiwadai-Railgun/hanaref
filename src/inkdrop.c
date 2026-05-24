@@ -42,6 +42,8 @@ char *status_to_str(InkdropStatus status) {
     case Dropped:
         return RED("(Dropped)");
     }
+
+    return "";
 }
 
 size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data) {
