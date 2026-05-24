@@ -1,6 +1,7 @@
 #include "../headers/inkdrop.h"
 
 #include "../headers/config.h"
+#include "../headers/terminal.h"
 
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
@@ -33,18 +34,19 @@ char *status_to_str(InkdropStatus status) {
     case None:
         return "";
     case Active:
-        return "(Active)";
+        return BLUE("(Active)");
     case OnHold:
-        return "(On Hold)";
+        return ORANGE("(On Hold)");
     case Completed:
-        return "(Completed)";
+        return GREEN("(Completed)");
     case Dropped:
-        return "(Dropped)";
+        return RED("(Dropped)");
     }
 }
 
-// same here, custom_data contains a buffer which is resized and populated
 size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data) {
+    // here we do not need to aggregate buffers, because tags request will never be long enough to require 2 chunks of
+    // data
     size_t bytes    = itemsize * nitems;
     char  *tag_name = custom_data;
 
@@ -121,8 +123,8 @@ InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {
     char  *url     = malloc(url_len);
     snprintf(url, url_len, "%s/note:%s", inkdrop_url, note_id);
 
-    char *local_url = malloc((strlen("inkdrop://") + NOTE_ID_LEN) * sizeof(char));
-    sprintf(local_url, "inkdrop://%s", note_id);
+    char *local_url = malloc((strlen("inkdrop://note/") + NOTE_ID_LEN) * sizeof(char));
+    sprintf(local_url, "inkdrop://note/%s", note_id);
     return_value.url = local_url;
 
     // ----- Get the note -----
@@ -189,7 +191,7 @@ void inkdrop_free_note(InkdropNote *note) {
 }
 
 void inkdrop_print_note(InkdropNote *note) {
-    printf("%s [%s] \e]8;;%s\e\\open\e]8;;\e\\\n", status_to_str(note->status), note->title, note->url);
+    printf("%s [%s] \x1b[38;5;25m\e]8;;%s\e\\open\e]8;;\e\\\x1b[39m\n", status_to_str(note->status), note->title, note->url);
 
     printf("\tTags -> ");
     // Print tags
