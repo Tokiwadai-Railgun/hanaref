@@ -5,8 +5,8 @@ excluded=(--exclude=.git/)
 if [ -f "$PROJECT_DIR/.gitignore" ] ; then
   while read -r line ; do
     [[ -z "$line" || "$line" == \#* ]] && continue
-    if [ -d "$line" ] ; then
-      excluded+=(--exclude-dir="$line")
+    if [ -d "$PROJECT_DIR/$line" ] ; then
+      excluded+=(--exclude-dir="$(basename $line)")
     else
       excluded+=(--exclude="$line")
     fi
