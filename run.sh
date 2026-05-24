@@ -3,9 +3,9 @@ excluded="--exclude=.git/ "
 if [ -f "./.gitignore" ] ; then
   while read -r line ; do
     if [ -d $line ] ; then
-      excluded+=" --exclude-dir=$line/"
+      excluded+=" --exclude-dir=$line"
     else
-      excluded+=" --exclude-from=$line"
+      excluded+=" --exclude=$line"
     fi
   done < .gitignore
 fi
