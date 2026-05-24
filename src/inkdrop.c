@@ -5,21 +5,58 @@
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data);
+void   inkdrop_print_note(InkdropNote *note);
 
-size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *ignored) {
-    UNUSED(ignored);
-    size_t bytes = itemsize * nitems;
+InkdropStatus str_to_status(char *status_name) {
+    if (strcmp(status_name, "active") == 0) {
+        return Active;
+    } else if (strcmp(status_name, "onHold") == 0) {
+        return OnHold;
+    } else if (strcmp(status_name, "completed") == 0) {
+        return Completed;
+    } else if (strcmp(status_name, "dropped") == 0) {
+        return Dropped;
+    }
+
+    return None;
+}
+
+char *status_to_str(InkdropStatus status) {
+    switch (status) {
+    case None:
+        return "";
+    case Active:
+        return "(Active)";
+    case OnHold:
+        return "(On Hold)";
+    case Completed:
+        return "(Completed)";
+    case Dropped:
+        return "(Dropped)";
+    }
+}
+
+// same here, custom_data contains a buffer which is resized and populated
+size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data) {
+    size_t bytes    = itemsize * nitems;
+    char  *tag_name = custom_data;
+
+    // extract tag infos
+    cJSON *tag_info = cJSON_Parse(buffer);
+    cJSON *name     = cJSON_GetObjectItemCaseSensitive(tag_info, "name");
+    strcpy(tag_name, cJSON_GetStringValue(name));
 
     return bytes;
 }
 
-char **get_tags(cJSON *note) {
+void extract_tags(cJSON *note, InkdropNote *return_value) {
     Config *config = get_config();
     cJSON  *tags   = cJSON_GetObjectItemCaseSensitive(note, "tags");
     cJSON  *tag;
@@ -29,8 +66,8 @@ char **get_tags(cJSON *note) {
     CURL  *curl     = config->curl;
     char **tags_arr = malloc(cJSON_GetArraySize(tags) * sizeof(char *));
 
-    printf("\tTags: ");
-    // TODO: include a caching system for the tags, avoiding to endlessly querrying the API for the same tags
+    // TODO: include a caching system for the tags, avoiding to endlessly
+    // querrying the API for the same tags
     int i = 0;
     cJSON_ArrayForEach(tag, tags) {
         char *tag_name = malloc(TAG_NAME_LEN * sizeof(char));
@@ -39,40 +76,38 @@ char **get_tags(cJSON *note) {
         snprintf(tag_url, url_len, "%s/%s", config->inkdorp_url, tag->valuestring);
         curl_easy_setopt(curl, CURLOPT_URL, tag_url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, inkdrop_handle_tag_request);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tags_arr);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tag_name);
         curl_easy_perform(curl);
 
-        // IMPORTANT: Reset the function for the following note request to proceed
+        // IMPORTANT: Reset the function for the following note request to
+        // proceed
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, inkdrop_handle_request);
         tags_arr[i] = tag_name;
         i++;
     }
-    printf("\n");
+    return_value->ntags = cJSON_GetArraySize(tags);
+    return_value->tags  = tags_arr;
 
     free(tag_url);
-
-    return tags_arr;
 }
 
 size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void *custom_data) {
-    InkdropNote *return_note = custom_data;
+    // [libcurl handlers](inkdrop://note/S27DZDxL)
+    // which means that custom data now contains a buffer being resized and completed for each chunk of data
+    size_t          bytes           = itemsize * nitems;
+    ResponseBuffer *response_buffer = custom_data;
 
-    size_t bytes = itemsize * nitems;
-    cJSON *note  = cJSON_Parse(buffer);
-    cJSON *title = cJSON_GetObjectItemCaseSensitive(note, "title");
+    response_buffer->buffer = realloc(response_buffer->buffer, bytes + response_buffer->size + 1);
+    if (response_buffer == NULL) {
+        // probably out of memory
+        printf("Unable to resize response buffer : %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 
-    printf("[%s]\n", title->valuestring);
+    memcpy(response_buffer->buffer + response_buffer->size, buffer, bytes);
+    response_buffer->size += bytes;
+    response_buffer->buffer[response_buffer->size] = '\0';
 
-    char **tags       = get_tags(note);
-    return_note->tags = tags;
-
-    // ---------- Displaying Status ----------
-    cJSON *status = cJSON_GetObjectItemCaseSensitive(note, "status");
-    printf("\tStatus : %s\n", status->valuestring);
-    // ---------------------------------------
-
-    // Cleaning the json tree, also clean all the subgenerated cJSONs
-    cJSON_Delete(note);
     return bytes;
 }
 
@@ -81,14 +116,42 @@ InkdropNote inkdrop_get_note(char *note_id, CURL *curl) {
     InkdropNote return_value;
 
     // Build the note url
-    char *url = malloc(sizeof(char) * (strlen(inkdrop_url) + strlen(note_id) + 7));
-    sprintf(url, "%s/note:%s", inkdrop_url, note_id);
+    // [snprintf coredump coredump](inkdrop://note/GK5iLwSy)
+    size_t url_len = sizeof(char) * (strlen(inkdrop_url) + strlen(note_id) + 7);
+    char  *url     = malloc(url_len);
+    snprintf(url, url_len, "%s/note:%s", inkdrop_url, note_id);
 
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &return_value);
+    char *local_url = malloc((strlen("inkdrop://") + NOTE_ID_LEN) * sizeof(char));
+    sprintf(local_url, "inkdrop://%s", note_id);
+    return_value.url = local_url;
+
+    // ----- Get the note -----
+    ResponseBuffer response_buffer;
+    response_buffer.size   = 0;
+    response_buffer.buffer = malloc(sizeof(char));
+
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_perform(curl);
 
+    cJSON *note   = cJSON_Parse(response_buffer.buffer);
+    cJSON *title  = cJSON_GetObjectItemCaseSensitive(note, "title");
+    cJSON *status = cJSON_GetObjectItemCaseSensitive(note, "status");
+
+    char *title_value = malloc((strlen(cJSON_GetStringValue(title)) + 1) * sizeof(char));
+    strcpy(title_value, title->valuestring);
+    return_value.title  = title_value;
+    return_value.status = str_to_status(status->valuestring);
+
+    // extract the tags from the cJSON and insert them into the InkdropNote struct
+    extract_tags(note, &return_value);
+
+    // Cleaning the json tree, also clean all the subgenerated cJSONs
+    cJSON_Delete(note);
+    // ----- Get tags for note -----
+
     free(url);
+    inkdrop_print_note(&return_value);
     return return_value;
 }
 
@@ -115,7 +178,7 @@ void inkdrop_handle_note_list(char *note_list, CURL *curl) {
 
 void inkdrop_free_note(InkdropNote *note) {
     // free the name
-    free(note->name);
+    free(note->title);
     free(note->description);
 
     // Free all the tags
@@ -123,4 +186,16 @@ void inkdrop_free_note(InkdropNote *note) {
         free(note->tags[i]);
     }
     free(note->tags);
+}
+
+void inkdrop_print_note(InkdropNote *note) {
+    printf("%s [%s] \e]8;;%s\e\\open\e]8;;\e\\\n", status_to_str(note->status), note->title, note->url);
+
+    printf("\tTags -> ");
+    // Print tags
+    for (int i = 0; i < note->ntags - 1; i++) {
+        printf("%s, ", note->tags[i]);
+    }
+    printf("%s", note->tags[note->ntags - 1]);
+    printf("\n");
 }
