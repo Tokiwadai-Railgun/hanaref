@@ -1,18 +1,17 @@
-excluded="--exclude=.git/ "
-
-if [ -f "./.gitignore" ] ; then
+#!/usr/bin/bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "$(readlink -f "${BASH_SOURCE[0]}")" )" &> /dev/null && pwd )
+PROJECT_DIR=$(pwd)
+excluded=(--exclude=.git/)
+if [ -f "$PROJECT_DIR/.gitignore" ] ; then
   while read -r line ; do
-    if [ -d $line ] ; then
-      excluded+=" --exclude-dir=$line"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [ -d "$line" ] ; then
+      excluded+=(--exclude-dir="$line")
     else
-      excluded+=" --exclude=$line"
+      excluded+=(--exclude="$line")
     fi
-  done < .gitignore
+  done < "$PROJECT_DIR/.gitignore"
 fi
 
-# -r recurse
-# -h remove the filenames
-# -o only return the matched part
-# -E use regex
-result=$(grep -rhoE '\[[A-Za-z1-9 ]+\]\(inkdrop://note/[A-Za-z0-9-]+\)' $excluded)
-./bin/tasks "$result" $@
+result=$(grep -rhoE '\[[A-Za-z1-9 ]+\]\(inkdrop://note/[A-Za-z0-9-]+\)' "${excluded[@]}" "$PROJECT_DIR")
+$SCRIPT_DIR/bin/tasks "$result" "$@"

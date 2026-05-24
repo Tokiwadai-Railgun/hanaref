@@ -12,5 +12,9 @@ build: $(SRCS)
 debug: $(SRCS)
 	$(CC) -o bin/tasks $^ $(CCFLAGS) $(CCLIB) -g
 
+install: build
+	chmod +x ./run.sh
+	ln -s ./run.sh ~/.local/bin/hanaref
+
 clean:
 	rm ./bin/*
