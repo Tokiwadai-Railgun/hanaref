@@ -53,6 +53,10 @@ size_t inkdrop_handle_tag_request(char *buffer, size_t itemsize, size_t nitems, 
     size_t bytes    = itemsize * nitems;
     char  *tag_name = custom_data;
 
+    if (bytes == 0) {
+        return 0;
+    }
+
     // extract tag infos
     cJSON *tag_info = cJSON_Parse(buffer);
     cJSON *name     = cJSON_GetObjectItemCaseSensitive(tag_info, "name");
@@ -82,7 +86,12 @@ void extract_tags(cJSON *note, InkdropNote *return_value) {
         curl_easy_setopt(curl, CURLOPT_URL, tag_url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, inkdrop_handle_tag_request);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, tag_name);
-        curl_easy_perform(curl);
+
+        CURLcode code = curl_easy_perform(curl);
+        if (code != CURLE_OK) {
+            printf("An error occured querrying the Inkdrop Tag API : %s\n", get_config()->curl_error);
+            exit(EXIT_FAILURE);
+        }
 
         // IMPORTANT: Reset the function for the following note request to
         // proceed
@@ -101,6 +110,10 @@ size_t inkdrop_handle_request(char *buffer, size_t itemsize, size_t nitems, void
     // which means that custom data now contains a buffer being resized and completed for each chunk of data
     size_t          bytes           = itemsize * nitems;
     ResponseBuffer *response_buffer = custom_data;
+    
+    if (bytes == 0) {
+        return 0;
+    }
 
     response_buffer->buffer = realloc(response_buffer->buffer, bytes + response_buffer->size + 1);
     if (response_buffer == NULL) {
@@ -137,7 +150,12 @@ InkdropNote inkdrop_get_note(char *note_id, CURL *curl, int all) {
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_perform(curl);
+
+    CURLcode code = curl_easy_perform(curl);
+    if (code != CURLE_OK) {
+        printf("An error occured querrying the Inkdrop Note API : %s\n", get_config()->curl_error);
+        exit(EXIT_FAILURE);
+    }
 
     cJSON *note   = cJSON_Parse(response_buffer.buffer);
     cJSON *title  = cJSON_GetObjectItemCaseSensitive(note, "title");

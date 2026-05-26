@@ -4,6 +4,7 @@
 #include <curl/curl.h>
 
 typedef struct {
+    char  curl_error[256];
     CURL *curl;
     char *inkdorp_url;
 } Config;

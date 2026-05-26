@@ -68,6 +68,8 @@ int main(int argc, char **args) {
     Config *conf = init_config();
     conf->curl   = curl;
 
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, conf->curl_error);
+
     inkdrop_handle_note_list(args[1], curl, params);
 
     // Not required to clean the params memory, in fact it avoids a loop
